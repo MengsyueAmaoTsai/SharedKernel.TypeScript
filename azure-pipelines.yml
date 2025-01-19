@@ -232,4 +232,28 @@ stages:
 
                   Write-Host "Updated package.json version to $(ReleaseVersion)"                      \
 
+            - task: NodeTool@0
+              displayName: 'Install Node.js $(nodeVersion)'
+              inputs:
+                versionSpec: '$(nodeVersion)'
 
+            - task: Npm@1
+              displayName: Install pnpm 
+              inputs:
+                command: custom
+                verbose: false
+                customCommand: 'install -g pnpm'
+
+            - script: |
+                pnpm i
+                pnpm run build
+              displayName: 'Build release artifacts'
+
+            - script: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+              displayName: Create .npmrc file
+              env:
+                NPM_TOKEN: $(NPM_TOKEN)
+
+            - sciprt: pnpm publish --access public
+              displayName: Publish package to npm registry
+            
