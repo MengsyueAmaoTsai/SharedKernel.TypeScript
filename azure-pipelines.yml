@@ -272,8 +272,7 @@ stages:
               script: |
                 Write-Host "Creating npmrc with token: ${NPM_TOKEN}"
                 echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-            env:
-              NPM_TOKEN: $(NPM_TOKEN)
+                cat .npmrc
 
           - script: pnpm publish --access public --no-git-checks
             displayName: Publish package to npm registry
