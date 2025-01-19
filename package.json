@@ -1,0 +1,17 @@
+{
+  "name": "@richillcapital/shared-kernel",
+  "version": "0.0.1",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc"
+  },
+  "author": "Mengsyue Amao Tsai",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.2"
+  }
+}
