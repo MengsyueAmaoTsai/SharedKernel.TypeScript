@@ -270,10 +270,11 @@ stages:
             inputs:
               targetType: inline
               script: |
-                $token = "$(NpmToken)"
+                $token = "$(NPM_TOKEN)"
                 $auth = "//registry.npmjs.org/:_authToken=$($token)"
                 $npmrcPath = "$(System.DefaultWorkingDirectory)/.npmrc"
                 Set-Content -Path $npmrcPath -Value $auth
-
+                Write-Host "Authentication token written to .npmrc"
+                
           - script: pnpm publish --access public --no-git-checks
             displayName: Publish package to npm registry
