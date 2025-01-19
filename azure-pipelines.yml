@@ -276,5 +276,5 @@ stages:
                 echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
 
                 
-          - script: pnpm publish --access public
+          - script: pnpm publish --access public --no-git-checks
             displayName: Publish package to npm registry
