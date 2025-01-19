@@ -108,7 +108,7 @@ stages:
           - task: PublishPipelineArtifact@1
             displayName: Publish pipeline artifact
             inputs:
-              targetPath: $(Build.SourcesDirectory)/.next
+              targetPath: $(Build.SourcesDirectory)/artifacts
               artifact: 'RichillCapital.Admin.Web-$(BuildVersion)'
               publishLocation: 'pipeline'
 
@@ -168,7 +168,7 @@ stages:
           - task: PublishPipelineArtifact@1
             displayName: Publish pipeline artifact
             inputs:
-              targetPath: $(Build.SourcesDirectory)/.next
+              targetPath: $(Build.SourcesDirectory)/artifacts
               artifact: 'RichillCapital.Admin.Web-$(ReleaseVersion)'
               publishLocation: 'pipeline'
               
