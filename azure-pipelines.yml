@@ -265,12 +265,11 @@ stages:
                   exit 0
                 }
 
-          - script: |
-              echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-              cat .npmrc 
-            displayName: Create npmrc with token
-            env:
-              NPM_TOKEN: $(NPM_TOKEN)
+          - task: npmAuthenticate@0
+            displayName: Setup npm Authenticate
+            inputs:
+              workingFile: .npmrc
+              customEndpoint: richillcapital@npm
 
           - script: pnpm publish --access public --no-git-checks
             displayName: Publish package to npm registry
