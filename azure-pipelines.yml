@@ -267,14 +267,11 @@ stages:
 
           - task: PowerShell@2
             displayName: Create npmrc with token
-            env:
-              NPM_TOKEN: $(NPM_TOKEN)              
             inputs:
               targetType: inline
               script: |
-                Write-Host "Creating npmrc with token: ${NPM_TOKEN}"
-                echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+                Write-Host "Creating npmrc with token: $(NPM_TOKEN)"
+                echo "//registry.npmjs.org/:_authToken=$(NPM_TOKEN)" > .npmrc
 
-                
           - script: pnpm publish --access public --no-git-checks
             displayName: Publish package to npm registry
