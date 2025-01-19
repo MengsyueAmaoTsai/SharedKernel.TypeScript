@@ -175,85 +175,100 @@ stages:
   - stage: ProductionStage
     displayName: Production stage 
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-    dependsOn: DevelopmentStage                
-
+    dependsOn: DevelopmentStage
     jobs:
       - job: ProductionJob
         displayName: Production job
-        variables:
-          steps:
-            - task: PowerShell@2
-              displayName: Generate release version from latest release branch
-              inputs:
-                targetType: inline
-                script: |
-                  git fetch --all 
-  
-                  $branches = git branch -r | Where-Object { $_ -match 'origin/release/\d+\.\d+\.\d+' }
-                  
-                  if (-not $branches) {
-                      Write-Error "No matching branches found."
-                      exit 1
-                  }                
-  
-                  $versions = $branches |
-                  ForEach-Object {
-                      if ($_ -match 'origin/release/(\d+\.\d+\.\d+)') {
-                          [PSCustomObject]@{
-                              BranchName = $_.Trim()
-                              Version = [System.Version]$matches[1]
-                          }
-                      }
-                  }
-                  
-                  $latestBranch = $versions |
-                      Sort-Object -Property Version -Descending |
-                      Select-Object -First 1
-  
-                  if ($latestBranch) {
-                      Write-Host "##vso[task.setvariable variable=ReleaseVersion]$($latestBranch.Version)"
-                      Write-Host "Generated release version: $($latestBranch.Version)"
-                  } else {
-                      Write-Error "Failed to find the latest release branch."
-                      exit 1
-                  }                
+        steps:
+          - task: PowerShell@2
+            displayName: Generate release version from latest release branch
+            inputs:
+              targetType: inline
+              script: |
+                git fetch --all 
 
-            - task: PowerShell@2
-              displayName: Update package.json version 
-              inputs:
-                targetType: inline
-                script: |
-                  Write-Host "Updating package.json version..."
+                $branches = git branch -r | Where-Object { $_ -match 'origin/release/\d+\.\d+\.\d+' }
+                
+                if (-not $branches) {
+                    Write-Error "No matching branches found."
+                    exit 1
+                }                
 
-                  $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
-                  $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
-                  $packageJson.version = "$(ReleaseVersion)"
-                  $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
+                $versions = $branches |
+                ForEach-Object {
+                    if ($_ -match 'origin/release/(\d+\.\d+\.\d+)') {
+                        [PSCustomObject]@{
+                            BranchName = $_.Trim()
+                            Version = [System.Version]$matches[1]
+                        }
+                    }
+                }
+                
+                $latestBranch = $versions |
+                    Sort-Object -Property Version -Descending |
+                    Select-Object -First 1
 
-                  Write-Host "Updated package.json version to $(ReleaseVersion)"                      \
+                if ($latestBranch) {
+                    Write-Host "##vso[task.setvariable variable=ReleaseVersion]$($latestBranch.Version)"
+                    Write-Host "Generated release version: $($latestBranch.Version)"
+                } else {
+                    Write-Error "Failed to find the latest release branch."
+                    exit 1
+                }                
+          
+          - task: PowerShell@2
+            displayName: Update package.json version 
+            inputs:
+              targetType: inline
+              script: |
+                Write-Host "Updating package.json version..."
 
-            - task: NodeTool@0
-              displayName: 'Install Node.js $(nodeVersion)'
-              inputs:
-                versionSpec: '$(nodeVersion)'
+                $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
+                $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+                $packageJson.version = "$(ReleaseVersion)"
+                $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
 
-            - task: Npm@1
-              displayName: Install pnpm 
-              inputs:
-                command: custom
-                verbose: false
-                customCommand: 'install -g pnpm'
+                Write-Host "Updated package.json version to $(ReleaseVersion)"      
+          
+          - task: NodeTool@0
+            displayName: 'Install Node.js $(nodeVersion)'
+            inputs:
+              versionSpec: '$(nodeVersion)'
 
-            - script: |
-                pnpm i
-                pnpm run build
-              displayName: 'Build release artifacts'
+          - task: Npm@1
+            displayName: Install pnpm 
+            inputs:
+              command: custom
+              verbose: false
+              customCommand: 'install -g pnpm'
 
-            - script: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-              displayName: Create .npmrc file
-              env:
-                NPM_TOKEN: $(NPM_TOKEN)
+          - script: pnpm i
+            displayName: 'Install dependencies'
 
-            - sciprt: pnpm publish --access public
-              displayName: Publish package to npm registry
-            
+          - script: pnpm run build
+            displayName: 'Build'
+
+          - task: PowerShell@2
+            displayName: Create and push Git tag 
+            inputs:
+              targetType: inline
+              script: |
+                git config user.name "Mengsyue Amao Tsai"
+                git config user.email "mengsyue.tsai@outlook.com"
+
+                git fetch --tags 
+                $tagName = "v$(ReleaseVersion)"
+
+                $existingTags = git tag --list 
+                if ($existingTags -contains $tagName) {
+                  Write-Host "Tag $tagName already exists."
+                  exit 0
+                }
+
+          - script: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+            displayName: 'Setup npm authentication'
+            env:
+              NPM_TOKEN: $(NPM_TOKEN)  
+                
+          - script: pnpm publish --access public
+            displayName: Publish package to npm registry
