@@ -1,0 +1,219 @@
+trigger:
+  branches:
+    include:
+      - develop
+      - feature/**
+      - release/**
+      - master
+      - hotfix/**
+
+pr:
+  branches:
+    include:
+      - develop
+      - master
+
+pool:
+  name: 'Default' # Use self-host agent pool named 'Default'
+
+variables:
+  nodeVersion: '22.x'
+
+resources:
+  - repo: self
+
+stages:
+  - stage: DevelopmentStage
+    displayName: Development stage 
+
+    jobs:
+      - job: DevelopmentJob
+        displayName: Development job
+
+        steps:
+          - task: NodeTool@0
+            displayName: 'Install Node.js $(nodeVersion)'
+            inputs:
+              versionSpec: '$(nodeVersion)'
+
+          - task: Npm@1
+            displayName: Install pnpm 
+            inputs:
+              command: custom
+              verbose: false
+              customCommand: 'install -g pnpm'
+
+          - script: pnpm i 
+            displayName: 'Install dependencies'
+
+          - script: pnpm run lint 
+            displayName: 'Lint'
+
+          - script: pnpm run build 
+            displayName: 'Build'
+
+          - script: pnpm run test 
+            displayName: 'Test'
+
+      - job: PublishJob
+        displayName: PublishJob
+        dependsOn: DevelopmentJob
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+
+        steps:
+          - task: PowerShell@2
+            displayName: Generate build version
+            inputs:
+              targetType: inline
+              script: |
+                Write-Host "Generating build version..."
+
+                $buildVersion = (Get-Date).ToString("yy.MMdd") + ".$(Build.BuildId)"
+                Write-Host "##vso[task.setvariable variable=BuildVersion]$buildVersion"
+
+                Write-Host "Generated Build Version: $buildVersion"     
+          
+          - task: PowerShell@2
+            displayName: Update package.json version 
+            inputs:
+              targetType: inline
+              script: |
+                Write-Host "Updating package.json version..."
+
+                $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
+                $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+                $packageJson.version = "$(BuildVersion)"
+                $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
+
+                Write-Host "Updated package.json version to $(BuildVersion)"
+
+          - task: NodeTool@0
+            displayName: 'Install Node.js $(nodeVersion)'
+            inputs:
+              versionSpec: '$(nodeVersion)'
+
+          - task: Npm@1
+            displayName: Install pnpm 
+            inputs:
+              command: custom
+              verbose: false
+              customCommand: 'install -g pnpm'
+
+          - script: pnpm i
+            displayName: 'Install dependencies'
+
+          - script: pnpm run build
+            displayName: 'Build'
+
+          - task: PublishPipelineArtifact@1
+            displayName: Publish pipeline artifact
+            inputs:
+              targetPath: $(Build.SourcesDirectory)/.next
+              artifact: 'RichillCapital.Admin.Web-$(BuildVersion)'
+              publishLocation: 'pipeline'
+
+  - stage: ReleaseStage
+    displayName: Release stage 
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'))
+
+    jobs:
+      - job: ReleaseJob
+        displayName: Release job
+
+        steps:
+          - task: NodeTool@0
+            displayName: 'Install Node.js $(nodeVersion)'
+            inputs:
+              versionSpec: '$(nodeVersion)'
+
+          - task: PowerShell@2
+            displayName: Generate release version 
+            inputs:
+              targetType: inline
+              script: |
+                Write-Host "Generating release version from branch: $(Build.SourceBranch)"
+
+                $branchName = "$(Build.SourceBranchName)"
+                Write-Host "##vso[task.setvariable variable=ReleaseVersion]$branchName"
+                
+                Write-Host "Generated Release Version: $branchName"
+          
+          - task: PowerShell@2
+            displayName: Update package.json version 
+            inputs:
+              targetType: inline
+              script: |
+                Write-Host "Updating package.json version..."
+
+                $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
+                $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+                $packageJson.version = "$(ReleaseVersion)"
+                $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
+
+                Write-Host "Updated package.json version to $(ReleaseVersion)"
+
+          - task: Npm@1
+            displayName: Install pnpm 
+            inputs:
+              command: custom
+              verbose: false
+              customCommand: 'install -g pnpm'
+
+          - script: pnpm i
+            displayName: 'Install dependencies'
+
+          - script: pnpm run build
+            displayName: 'Build'
+
+          - task: PublishPipelineArtifact@1
+            displayName: Publish pipeline artifact
+            inputs:
+              targetPath: $(Build.SourcesDirectory)/.next
+              artifact: 'RichillCapital.Admin.Web-$(ReleaseVersion)'
+              publishLocation: 'pipeline'
+              
+          - task: Docker@2
+            displayName: Build and push Docker image
+            inputs:
+              command: buildAndPush
+              repository: msat7201/admin-web
+              Dockerfile: $(Build.SourcesDirectory)/Dockerfile
+              tags: |
+                $(ReleaseVersion)
+  
+      - job: DeployJob
+        displayName: Deploy job 
+        dependsOn: ReleaseJob
+        
+        variables:
+          imageName: 'msat7201/admin-web'
+          containerName: 'admin-web'
+          
+        steps:
+          - task: PowerShell@2
+            displayName: Generate release version 
+            inputs:
+              targetType: inline
+              script: |
+                Write-Host "Generating release version from branch: $(Build.SourceBranch)"
+
+                $branchName = "$(Build.SourceBranchName)"
+                Write-Host "##vso[task.setvariable variable=ReleaseVersion]$branchName"
+                
+                Write-Host "Generated Release Version: $branchName"
+
+          - task: SSH@0
+            displayName: SSH to remote server
+            inputs:
+              sshEndpoint: SSH-GCP-Dev
+              runOptions: inline 
+              inline: |
+                sudo docker pull $(imageName):$(ReleaseVersion)
+                  
+                if [ "$(sudo docker ps -a --filter "name=$(containerName)" --format "{{.Names}}")" ]; then
+                    echo "Stopping and removing existing container..."
+                    sudo docker stop $(containerName)
+                    sudo docker rm $(containerName)
+                fi
+              
+                sudo docker run -d -it -p 9999:3000 --name $(containerName) $(imageName):$(ReleaseVersion) 
