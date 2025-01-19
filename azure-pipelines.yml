@@ -265,7 +265,10 @@ stages:
                   exit 0
                 }
 
-          - script: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+          - script: |
+              Write-Host "Creating npmrc with token: ${NPM_TOKEN}"
+              echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+
             displayName: 'Setup npm authentication'
             env:
               NPM_TOKEN: $(NPM_TOKEN)  
