@@ -109,7 +109,7 @@ stages:
             displayName: Publish pipeline artifact
             inputs:
               targetPath: $(Build.SourcesDirectory)/artifacts
-              artifact: 'RichillCapital.Admin.Web-$(BuildVersion)'
+              artifact: 'RichillCapital.SharedKernel-$(BuildVersion)'
               publishLocation: 'pipeline'
 
   - stage: ReleaseStage
@@ -169,51 +169,67 @@ stages:
             displayName: Publish pipeline artifact
             inputs:
               targetPath: $(Build.SourcesDirectory)/artifacts
-              artifact: 'RichillCapital.Admin.Web-$(ReleaseVersion)'
+              artifact: 'RichillCapital.SharedKernel-$(ReleaseVersion)'
               publishLocation: 'pipeline'
-              
-          - task: Docker@2
-            displayName: Build and push Docker image
-            inputs:
-              command: buildAndPush
-              repository: msat7201/admin-web
-              Dockerfile: $(Build.SourcesDirectory)/Dockerfile
-              tags: |
-                $(ReleaseVersion)
-  
-      - job: DeployJob
-        displayName: Deploy job 
-        dependsOn: ReleaseJob
-        
+
+  - stage: ProductionStage
+    displayName: Production stage 
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+    dependsOn: DevelopmentStage                
+
+    jobs:
+      - job: ProductionJob
+        displayName: Production job
         variables:
-          imageName: 'msat7201/admin-web'
-          containerName: 'admin-web'
-          
-        steps:
-          - task: PowerShell@2
-            displayName: Generate release version 
-            inputs:
-              targetType: inline
-              script: |
-                Write-Host "Generating release version from branch: $(Build.SourceBranch)"
-
-                $branchName = "$(Build.SourceBranchName)"
-                Write-Host "##vso[task.setvariable variable=ReleaseVersion]$branchName"
-                
-                Write-Host "Generated Release Version: $branchName"
-
-          - task: SSH@0
-            displayName: SSH to remote server
-            inputs:
-              sshEndpoint: SSH-GCP-Dev
-              runOptions: inline 
-              inline: |
-                sudo docker pull $(imageName):$(ReleaseVersion)
+          steps:
+            - task: PowerShell@2
+              displayName: Generate release version from latest release branch
+              inputs:
+                targetType: inline
+                script: |
+                  git fetch --all 
+  
+                  $branches = git branch -r | Where-Object { $_ -match 'origin/release/\d+\.\d+\.\d+' }
                   
-                if [ "$(sudo docker ps -a --filter "name=$(containerName)" --format "{{.Names}}")" ]; then
-                    echo "Stopping and removing existing container..."
-                    sudo docker stop $(containerName)
-                    sudo docker rm $(containerName)
-                fi
-              
-                sudo docker run -d -it -p 9999:3000 --name $(containerName) $(imageName):$(ReleaseVersion) 
+                  if (-not $branches) {
+                      Write-Error "No matching branches found."
+                      exit 1
+                  }                
+  
+                  $versions = $branches |
+                  ForEach-Object {
+                      if ($_ -match 'origin/release/(\d+\.\d+\.\d+)') {
+                          [PSCustomObject]@{
+                              BranchName = $_.Trim()
+                              Version = [System.Version]$matches[1]
+                          }
+                      }
+                  }
+                  
+                  $latestBranch = $versions |
+                      Sort-Object -Property Version -Descending |
+                      Select-Object -First 1
+  
+                  if ($latestBranch) {
+                      Write-Host "##vso[task.setvariable variable=ReleaseVersion]$($latestBranch.Version)"
+                      Write-Host "Generated release version: $($latestBranch.Version)"
+                  } else {
+                      Write-Error "Failed to find the latest release branch."
+                      exit 1
+                  }                
+
+            - task: PowerShell@2
+              displayName: Update package.json version 
+              inputs:
+                targetType: inline
+                script: |
+                  Write-Host "Updating package.json version..."
+
+                  $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
+                  $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+                  $packageJson.version = "$(ReleaseVersion)"
+                  $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
+
+                  Write-Host "Updated package.json version to $(ReleaseVersion)"                      \
+
+
