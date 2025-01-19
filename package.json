@@ -19,8 +19,5 @@
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
-  },
-  "dependencies": {
-    "@richillcapital/shared-kernel": "file:richillcapital-shared-kernel-0.0.4.tgz"
   }
 }
