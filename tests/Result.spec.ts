@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ErrorBase } from "../src/index";
-import { Result } from "../src/monads/index";
+import { Result } from "../src/monads";
 
 describe("Result", () => {
 	const ERROR = ErrorBase.invalid("error");
