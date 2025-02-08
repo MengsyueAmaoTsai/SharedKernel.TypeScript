@@ -4,7 +4,7 @@ import { ErrorBase, ErrorType } from "../src/";
 describe("Error", () => {
 	it("create should throw an error when given ErrorType.None", () => {
 		expect(() =>
-			ErrorBase.create(ErrorType.None, "errorCode", "errorMessage"),
+			ErrorBase.create(ErrorType.Null, "errorCode", "errorMessage"),
 		).toThrow("Error type cannot be None.");
 	});
 

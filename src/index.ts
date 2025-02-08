@@ -1,5 +1,5 @@
 export enum ErrorType {
-	None = "None",
+	Null = "Null",
 	Validation = "Validation",
 	Unauthorized = "Unauthorized",
 	Forbidden = "Forbidden",
@@ -12,7 +12,7 @@ export enum ErrorType {
 }
 
 export class ErrorBase {
-	public static readonly None = new ErrorBase(ErrorType.None, "", "");
+	public static readonly Null = new ErrorBase(ErrorType.Null, "", "");
 
 	private constructor(
 		public readonly type: ErrorType,
@@ -25,8 +25,8 @@ export class ErrorBase {
 		code: string,
 		message: string,
 	): ErrorBase {
-		if (type === ErrorType.None) {
-			throw new Error("Error type cannot be None.");
+		if (type === ErrorType.Null) {
+			throw new Error("Error type cannot be Null.");
 		}
 
 		return new ErrorBase(type, code, message);
