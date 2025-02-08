@@ -5,7 +5,7 @@ describe("Error", () => {
 	it("create should throw an error when given ErrorType.None", () => {
 		expect(() =>
 			ErrorBase.create(ErrorType.Null, "errorCode", "errorMessage"),
-		).toThrow("Error type cannot be None.");
+		).toThrow("Error type cannot be Null.");
 	});
 
 	const validErrorTypes = [
