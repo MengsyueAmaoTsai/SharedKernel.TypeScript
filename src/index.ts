@@ -33,6 +33,10 @@ export class ErrorBase {
 			throw new Error("Error type cannot be Null.");
 		}
 
+		if (!code) {
+			throw new Error("Error code cannot be null or empty.");
+		}
+
 		return new ErrorBase(type, code, message);
 	}
 
