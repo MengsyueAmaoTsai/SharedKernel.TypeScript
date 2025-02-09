@@ -97,4 +97,31 @@ describe("Error", () => {
 		expect(error.code).toBe("Null");
 		expect(error.message).toBe("");
 	});
+
+	it("errors with same properties should be equal", () => {
+		const sameCode = "Error.Code";
+		const sameMessage = "Error message";
+
+		const error1 = ErrorBase.invalid(sameCode, sameMessage);
+		const error2 = ErrorBase.invalid(sameCode, sameMessage);
+		expect(error1).toEqual(error2);
+	});
+
+	it("errors with different type should not be equal", () => {
+		const error1 = ErrorBase.invalid("Error.Code", "Error message");
+		const error2 = ErrorBase.unauthorized("Error.Code", "Error message");
+		expect(error1).not.toEqual(error2);
+	});
+
+	it("errors with different code should not be equal", () => {
+		const error1 = ErrorBase.invalid("Error.Code1", "Error message");
+		const error2 = ErrorBase.invalid("Error.Code2", "Error message");
+		expect(error1).not.toEqual(error2);
+	});
+
+	it("errors with different message should not be equal", () => {
+		const error1 = ErrorBase.invalid("Error.Code", "Error message 1");
+		const error2 = ErrorBase.invalid("Error.Code", "Error message 2");
+		expect(error1).not.toEqual(error2);
+	});
 });
