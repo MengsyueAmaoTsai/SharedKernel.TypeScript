@@ -54,4 +54,11 @@ describe("Maybe<TValue>", () => {
 
 		expect(maybe1).toEqual(maybe2);
 	});
+
+	it("null maybe should not be equal to maybe with value", () => {
+		const maybe1 = Maybe.null<number>();
+		const maybe2 = Maybe.with(42);
+
+		expect(maybe1).not.toEqual(maybe2);
+	});
 });
