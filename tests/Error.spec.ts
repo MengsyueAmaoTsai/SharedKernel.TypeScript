@@ -11,7 +11,7 @@ describe("Error", () => {
 	const validErrorTypes = [
 		ErrorType.Validation,
 		ErrorType.Unauthorized,
-		ErrorType.Forbidden,
+		ErrorType.AccessDenied,
 		ErrorType.NotFound,
 		ErrorType.MethodNotAllowed,
 		ErrorType.Conflict,
