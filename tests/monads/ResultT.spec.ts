@@ -27,6 +27,12 @@ describe("Result<TValue>", () => {
 		);
 	});
 
+	it("failure given null error should throw exeception", () => {
+		expect(() => ResultT.failure<number>(ErrorBase.Null)).toThrowError(
+			"Error can not be ErrorBase.Null",
+		);
+	});
+
 	it("results with same value should be equal", () => {
 		const value = 42;
 		const result1 = ResultT.success(value);

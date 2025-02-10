@@ -77,6 +77,9 @@ export class ResultT<TValue> {
 	 * @returns A new `ResultT` instance representing a failure.
 	 */
 	public static failure<TValue>(error: ErrorBase): ResultT<TValue> {
+		if (error === ErrorBase.Null) {
+			throw new Error("Error can not be ErrorBase.Null");
+		}
 		return new ResultT<TValue>(false, error, undefined);
 	}
 }
