@@ -32,7 +32,7 @@ export class Maybe<TValue> {
 	 * Throws an error if the Maybe is null or undefined.
 	 */
 	get value(): TValue {
-		if (this._value === undefined || this._value === null) {
+		if (!this._hasValue || this._value === undefined || this._value === null) {
 			throw new Error("Can not access value on a null Maybe");
 		}
 
