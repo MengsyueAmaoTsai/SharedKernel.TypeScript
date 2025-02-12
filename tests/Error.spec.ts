@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { ErrorBase, ErrorType } from "../src/";
 
 describe("Error", () => {
-	it("create when given error type null should throw error", () => {
+	it("create - when given error type null should throw error", () => {
 		expect(() =>
 			ErrorBase.create(ErrorType.Null, "errorCode", "errorMessage"),
 		).toThrow("Error type cannot be Null.");
 	});
 
-	it("create when given empty error code should throw error", () => {
+	it("create - when given empty error code should throw error", () => {
 		expect(() =>
 			ErrorBase.create(ErrorType.Validation, "", "errorMessage"),
 		).toThrow("Error code cannot be null or empty.");
@@ -27,7 +27,7 @@ describe("Error", () => {
 	] as const;
 
 	describe.each(validErrorTypes)(
-		"create should create an error for type %s",
+		"create - should create an error for type %s",
 		(errorType, typeName) => {
 			it(`should create a ${typeName} error`, () => {
 				const errorCode = "Error.Code";
@@ -43,7 +43,7 @@ describe("Error", () => {
 	);
 
 	describe.each(validErrorTypes)(
-		"Factory methods should create correct error for type %s",
+		"Factory methods - should create correct error for type %s",
 		(errorType, typeName) => {
 			it(`should create a ${typeName} error using factory method`, () => {
 				const customErrorCode = "Error.Code";
@@ -90,7 +90,7 @@ describe("Error", () => {
 		},
 	);
 
-	it("ErrorBase.null should return a Null error", () => {
+	it("ErrorBase.Null - should return a Null error", () => {
 		const error = ErrorBase.Null;
 
 		expect(error.type).toBe(ErrorType.Null);

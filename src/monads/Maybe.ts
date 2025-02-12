@@ -45,7 +45,9 @@ export class Maybe<TValue> {
 	 * @param value - The value to wrap in the Maybe.
 	 * @returns A Maybe instance containing the specified value.
 	 */
-	public static with<TValue>(value: TValue | null | undefined): Maybe<TValue> {
+	public static withValue<TValue>(
+		value: TValue | null | undefined,
+	): Maybe<TValue> {
 		if (value === undefined || value === null) {
 			return Maybe.null<TValue>();
 		}
