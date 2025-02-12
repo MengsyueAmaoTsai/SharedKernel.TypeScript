@@ -3,7 +3,7 @@ import { ErrorBase } from "../../src/Error";
 import { ResultT } from "../../src/monads/ResultT";
 
 describe("Result<TValue>", () => {
-	it("success should create success result", () => {
+	it("success - should create success result", () => {
 		const value = 42;
 		const result = ResultT.success<number>(value);
 
@@ -15,7 +15,7 @@ describe("Result<TValue>", () => {
 		expect(result.value).toBe(value);
 	});
 
-	it("failure should create failure result", () => {
+	it("failure - should create failure result", () => {
 		const error = ErrorBase.invalid("error");
 		const result = ResultT.failure<number>(error);
 
@@ -27,7 +27,7 @@ describe("Result<TValue>", () => {
 		);
 	});
 
-	it("failure given null error should throw exeception", () => {
+	it("failure - given null error should throw exception", () => {
 		expect(() => ResultT.failure<number>(ErrorBase.Null)).toThrowError(
 			"Error can not be ErrorBase.Null",
 		);
