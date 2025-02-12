@@ -1,7 +1,9 @@
+import type { IEquitable } from "./interfaces";
+
 /**
  * Base class for value objects.
  */
-export abstract class ValueObject {
+export abstract class ValueObject implements IEquitable<ValueObject> {
 	/**
 	 * Checks if this value object is equal to another value object.
 	 * @param other - The other value object to compare.
@@ -46,5 +48,9 @@ export abstract class SingleValueObject<TValue> extends ValueObject {
 	 */
 	public toString(): string {
 		return String(this.value);
+	}
+
+	protected getAtomicValues(): unknown[] {
+		return [this.value];
 	}
 }
