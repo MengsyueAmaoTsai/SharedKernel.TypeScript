@@ -143,7 +143,7 @@ stages:
 
     jobs:
       - job: DeployProductionJob
-        displayName: Publish to PyPI
+        displayName: Publish to NPM registry
         steps:
           - task: PowerShell@2
             displayName: Generate release version from latest release branch
