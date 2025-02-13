@@ -1,6 +1,6 @@
 {
   "name": "@richillcapital/shared-kernel",
-  "version": "0.0.4",
+  "version": "1.0.3",
   "main": "artifacts/index.js",
   "types": "artifacts/index.d.ts",
   "scripts": {

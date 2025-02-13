@@ -219,5 +219,16 @@ stages:
                 git tag -a "v$(ReleaseVersion)" -m "Release version $(ReleaseVersion)"
                 git push origin "v$(ReleaseVersion)"
 
-          - script: pnpm publish --no-git-checks
-            displayName: Publish to NPM registry
+          - task: PowerShell@2
+            displayName: Write authentication token to .npmrc
+            inputs:
+              targetType: inline
+              script: |
+                $token = "$(NPM_TOKEN)"
+                $auth = "//registry.npmjs.org/:_authToken=$($token)"
+                $npmrcPath = "$(System.DefaultWorkingDirectory)/.npmrc"
+                Set-Content -Path $npmrcPath -Value $auth
+                Write-Host "Authentication token written to .npmrc"
+                
+          - script: pnpm publish --access public --no-git-checks
+            displayName: Publish package to npm registry
