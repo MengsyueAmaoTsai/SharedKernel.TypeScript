@@ -1,8 +1,21 @@
 {
   "name": "@richillcapital/shared-kernel",
-  "version": "1.0.3",
+  "version": "0.0.4",
   "main": "artifacts/index.js",
   "types": "artifacts/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./artifacts/index.js",
+      "types": "./artifacts/index.d.ts"
+    },
+    "./monads": {
+      "import": "./artifacts/monads/index.js",
+      "types": "./artifacts/monads/index.d.ts"
+    }
+  },
+  "files": [
+    "artifacts"
+  ],
   "scripts": {
     "test": "vitest run",
     "build": "tsc",
