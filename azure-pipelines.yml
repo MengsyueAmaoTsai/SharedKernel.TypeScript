@@ -23,12 +23,12 @@ resources:
   - repo: self
 
 stages:
-  - stage: DevelopmentStage
-    displayName: Development stage 
+  - stage: BuildStage
+    displayName: Build 
 
     jobs:
-      - job: DevelopmentJob
-        displayName: Development job
+      - job: BuildJob
+        displayName: Build 
 
         steps:
           - script: pnpm i 
@@ -45,7 +45,7 @@ stages:
 
       - job: PublishJob
         displayName: PublishJob
-        dependsOn: DevelopmentJob
+        dependsOn: BuildJob
         condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
 
         steps:
@@ -87,3 +87,45 @@ stages:
               targetPath: $(Build.SourcesDirectory)/artifacts
               artifact: 'RichillCapital.SharedKernel-$(BuildVersion)'
               publishLocation: 'pipeline'
+
+  - stage: ReleaseStage
+    displayName: Build release artifacts 
+    dependsOn: BuildStage
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')
+
+    jobs:
+      - job: ReleaseJob
+        displayName: Build release artifacts
+        steps:
+          - task: PowerShell@2
+            displayName: Generate release version
+            inputs:
+              targetType: inline
+              script: |
+                Write-Host "Generating release version from branch: $(Build.SourceBranch)"
+
+                $branchName = "$(Build.SourceBranchName)"
+                Write-Host "##vso[task.setvariable variable=ReleaseVersion]$branchName"
+
+                Write-Host "Generated Release Version: $branchName"
+
+          - task: PowerShell@2
+            displayName: Update package.json version
+            inputs:
+              targetType: inline
+              script: |
+                Write-Host "Updating package.json version..."
+
+                $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
+                $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+                $packageJson.version = "$(ReleaseVersion)"
+                $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
+
+                Write-Host "Updated package.json version to $(ReleaseVersion)"
+
+          - script: | 
+              pnpm i
+              pnpm run build 
+            displayName: Generate release build 
+
+             
