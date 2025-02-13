@@ -219,5 +219,5 @@ stages:
                 git tag -a "v$(ReleaseVersion)" -m "Release version $(ReleaseVersion)"
                 git push origin "v$(ReleaseVersion)"
 
-          - script: pnpm publish --access public
+          - script: pnpm publish --no-git-checks
             displayName: Publish to NPM registry
