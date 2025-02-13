@@ -128,4 +128,96 @@ stages:
               pnpm run build 
             displayName: Generate release build 
 
-             
+          - task: PublishPipelineArtifact@1
+            displayName: Publish pipeline artifact
+            inputs:
+              targetPath: $(Build.SourcesDirectory)/artifacts
+              artifact: 'RichillCapital.SharedKernel-$(BuildVersion)'
+              publishLocation: 'pipeline'             
+
+
+  - stage: ProductionStage
+    displayName: Production deployment
+    dependsOn: BuildStage
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+
+    jobs:
+      - job: DeployProductionJob
+        displayName: Publish to PyPI
+        steps:
+          - task: PowerShell@2
+            displayName: Generate release version from latest release branch
+            inputs:
+              targetType: inline
+              script: |
+                git fetch --all
+
+                $branches = git branch -r | Where-Object { $_ -match 'origin/release/\d+\.\d+\.\d+' }
+
+                if (-not $branches) {
+                    Write-Error "No matching branches found."
+                    exit 1
+                }
+
+                $versions = $branches |
+                ForEach-Object {
+                    if ($_ -match 'origin/release/(\d+\.\d+\.\d+)') {
+                        [PSCustomObject]@{
+                            BranchName = $_.Trim()
+                            Version = [System.Version]$matches[1]
+                        }
+                    }
+                }
+
+                $latestBranch = $versions |
+                    Sort-Object -Property Version -Descending |
+                    Select-Object -First 1
+
+                if ($latestBranch) {
+                    Write-Host "##vso[task.setvariable variable=ReleaseVersion]$($latestBranch.Version)"
+                    Write-Host "Generated release version: $($latestBranch.Version)"
+                } else {
+                    Write-Error "Failed to find the latest release branch."
+                    exit 1
+                }
+
+          - task: PowerShell@2
+            displayName: Update package.json version
+            inputs:
+              targetType: inline
+              script: |
+                Write-Host "Updating package.json version..."
+
+                $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
+                $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+                $packageJson.version = "$(ReleaseVersion)"
+                $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
+
+                Write-Host "Updated package.json version to $(ReleaseVersion)"
+
+          - script: |
+              pnpm i
+              pnpm run build
+            displayName: Generate production build
+            
+          - task: PowerShell@2
+            displayName: Create and push git tag
+            inputs:
+              targetType: inline
+              script: |
+                git config user.name "Mengsyue Amao Tsai"
+                git config user.email "mengsyue.tsai@outlook.com"
+                git fetch --tags
+
+                $tagName = "v$(ReleaseVersion)"
+                $existingTags = git tag --list
+                if ($existingTags -contains $tagName) {
+                  Write-Host "Tag $tagName already exists."
+                  exit 0
+                }                
+
+                git tag -a "v$(ReleaseVersion)" -m "Release version $(ReleaseVersion)"
+                git push origin "v$(ReleaseVersion)"
+
+          - script: pnpm publish --access public
+            displayName: Publish to NPM registry
