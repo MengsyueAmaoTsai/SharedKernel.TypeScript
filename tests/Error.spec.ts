@@ -24,6 +24,7 @@ describe("Error", () => {
 		[ErrorType.UnsupportedMediaType, "UnsupportedMediaType"],
 		[ErrorType.Unexpected, "Unexpected"],
 		[ErrorType.Unavailable, "Unavailable"],
+		[ErrorType.Timeout, "Timeout"],
 	] as const;
 
 	describe.each(validErrorTypes)(
@@ -69,6 +70,8 @@ describe("Error", () => {
 							return ErrorBase.unexpected;
 						case ErrorType.Unavailable:
 							return ErrorBase.unavailable;
+						case ErrorType.Timeout:
+							return ErrorBase.timeout;
 					}
 				})();
 
