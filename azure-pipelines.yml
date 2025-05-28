@@ -123,9 +123,10 @@ stages:
 
                 Write-Host "Updated package.json version to $(ReleaseVersion)"
 
-          - script: | 
-              pnpm i
-              pnpm run build 
+          - script: pnpm i  
+            displayName: Install dependencies 
+
+          - script: pnpm run build  
             displayName: Generate release build 
 
           - task: PublishPipelineArtifact@1
