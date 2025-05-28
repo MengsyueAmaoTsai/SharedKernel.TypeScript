@@ -132,7 +132,7 @@ stages:
             displayName: Publish pipeline artifact
             inputs:
               targetPath: $(Build.SourcesDirectory)/artifacts
-              artifact: 'RichillCapital.SharedKernel-$(BuildVersion)'
+              artifact: 'RichillCapital.SharedKernel-$(ReleaseVersion)'
               publishLocation: 'pipeline'             
 
   - stage: ProductionStage
