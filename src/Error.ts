@@ -12,6 +12,7 @@ export enum ErrorType {
 	UnsupportedMediaType = "UnsupportedMediaType",
 	Unexpected = "Unexpected",
 	Unavailable = "Unavailable",
+	Timeout = "Timeout",
 }
 
 /**
@@ -307,5 +308,30 @@ export class ErrorBase {
 		}
 
 		return ErrorBase.create(ErrorType.Unavailable, arg1, arg2);
+	}
+
+	/**
+	 * Creates a new instance of the ErrorBase class with the ErrorType.Timeout type.
+	 * @param code The error code.
+	 * @param message The error message.
+	 * @returns A new instance of the ErrorBase class with the ErrorType.Timeout type.
+	 */
+	public static timeout(code: string, message: string): ErrorBase;
+	/**
+	 * Creates a new instance of the ErrorBase class with the ErrorType.Timeout type.
+	 * @param message The error message.
+	 * @returns A new instance of the ErrorBase class with the ErrorType.Timeout type.
+	 */
+	public static timeout(message: string): ErrorBase;
+	public static timeout(arg1: string, arg2?: string): ErrorBase {
+		if (!arg2) {
+			return ErrorBase.create(
+				ErrorType.Timeout,
+				ErrorType.Timeout.toString(),
+				arg1,
+			);
+		}
+
+		return ErrorBase.create(ErrorType.Timeout, arg1, arg2);
 	}
 }
