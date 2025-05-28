@@ -123,16 +123,17 @@ stages:
 
                 Write-Host "Updated package.json version to $(ReleaseVersion)"
 
-          - script: | 
-              pnpm i
-              pnpm run build 
+          - script: pnpm i  
+            displayName: Install dependencies 
+
+          - script: pnpm run build  
             displayName: Generate release build 
 
           - task: PublishPipelineArtifact@1
             displayName: Publish pipeline artifact
             inputs:
               targetPath: $(Build.SourcesDirectory)/artifacts
-              artifact: 'RichillCapital.SharedKernel-$(BuildVersion)'
+              artifact: 'RichillCapital.SharedKernel-$(ReleaseVersion)'
               publishLocation: 'pipeline'             
 
   - stage: ProductionStage
@@ -194,10 +195,11 @@ stages:
 
                 Write-Host "Updated package.json version to $(ReleaseVersion)"
 
-          - script: |
-              pnpm i
-              pnpm run build
-            displayName: Generate production build
+          - script: pnpm i  
+            displayName: Install dependencies 
+
+          - script: pnpm run build  
+            displayName: Generate release build 
             
           - task: PowerShell@2
             displayName: Create and push git tag
