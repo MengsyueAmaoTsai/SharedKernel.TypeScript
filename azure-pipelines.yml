@@ -25,23 +25,19 @@ resources:
 stages:
   - stage: BuildStage
     displayName: Build 
-
     jobs:
       - job: BuildJob
         displayName: Build 
-
         steps:
-          - script: pnpm i 
-            displayName: 'Install dependencies'
-
-          - script: pnpm run lint 
-            displayName: 'Lint'
-
-          - script: pnpm run build 
-            displayName: 'Build'
-
-          - script: pnpm run test 
-            displayName: 'Test'
+          - task: PowerShell@2
+            displayName: Build 
+            inputs:
+              targetType: inline
+              script: |
+                pnpm i 
+                pnpm run lint 
+                pnpm run build
+                pnpm run test
 
       - job: PublishJob
         displayName: PublishJob
