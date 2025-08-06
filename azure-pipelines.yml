@@ -72,12 +72,10 @@ stages:
           - task: PowerShell@2
             displayName: Update Version
             inputs:
-              targetType: inline
-              script: |
-                $packageJson = Get-Content $(packageJsonPath) -Raw | ConvertFrom-Json
-                $packageJson.version = "$(BuildVersion)"
-                $packageJson | ConvertTo-Json -Depth 32 | Set-Content $(packageJsonPath)
-                  
+              targetType: filePath
+              filePath: $(Build.SourcesDirectory)/scripts/UpdateVersion.ps1
+              arguments: -PackageJsonPath $(packageJsonPath) -Version $(BuildVersion)    
+              
           - task: PowerShell@2
             displayName: Publish Artifacts
             inputs:
