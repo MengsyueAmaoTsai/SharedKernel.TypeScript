@@ -12,3 +12,5 @@ param (
 $packageJson = Get-Content -Path $PackageJsonPath -Raw | ConvertFrom-Json
 $packageJson.version = $Version
 $packageJson | ConvertTo-Json -Depth 10 | Set-Content -Path $PackageJsonPath
+
+Write-Host "Updated package.json version to: $Version" -ForegroundColor Green
