@@ -51,6 +51,7 @@ stages:
             inputs:
               targetType: inline
               script: |
+                pnpm i
                 pnpm run test          
 
   - stage: PublishStage
