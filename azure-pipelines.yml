@@ -21,7 +21,7 @@ resources:
 
 variables:
   buildConfiguration: Release 
-  packageJsonPath: $(Build.SourceDirectory)/package.json
+  packageJsonPath: $(Build.SourcesDirectory)/package.json
 
 stages:
   - stage: BuildStage
