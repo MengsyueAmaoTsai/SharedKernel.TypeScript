@@ -38,7 +38,7 @@ export abstract class Entity<TId> implements IEntity, IEquitable<Entity<TId>> {
 	 * @returns An array of domain events.
 	 */
 	public getDomainEvents(): IDomainEvent[] {
-		return this.domainEvents;
+		return [... this.domainEvents];
 	}
 
 	/**
