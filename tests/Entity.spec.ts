@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DomainEvent, Entity, SingleValueObject } from "../src/";
+import { IDomainEvent, Entity, SingleValueObject } from "../src/";
 
 class TestEntityId extends SingleValueObject<string> {
 	public static create(id: string): TestEntityId {
@@ -16,7 +16,7 @@ class TestEntity extends Entity<TestEntityId> {
 	}
 }
 
-class TestDomainEvent extends DomainEvent {}
+class TestDomainEvent implements IDomainEvent {}
 
 describe("Entity", () => {
 	it("raiseDomainEvent - should add domain event", () => {

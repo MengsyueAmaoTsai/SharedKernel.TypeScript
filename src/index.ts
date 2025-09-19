@@ -1,4 +1,4 @@
 export { ErrorBase, ErrorType } from "./Error";
 export { ValueObject, SingleValueObject } from "./ValueObject";
 export { Entity, IEntity } from "./Entity";
-export { IDomainEvent, DomainEvent } from "./DomainEvent";
+export { IDomainEvent } from "./DomainEvent";
