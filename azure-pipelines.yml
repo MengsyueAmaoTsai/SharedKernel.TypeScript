@@ -14,222 +14,227 @@ pr:
       - master
 
 pool:
-  name: 'Default' # Use self-host agent pool named 'Default'
-
-variables:
-  nodeVersion: '22.x'
+  name: Default # Use self-host agent pool named 'Default'
 
 resources:
   - repo: self
 
+variables:
+  buildConfiguration: Release 
+  packageJsonPath: $(Build.SourcesDirectory)/package.json
+  artifactsPath: $(Build.SourcesDirectory)/artifacts
+
 stages:
   - stage: BuildStage
-    displayName: Build 
-
+    displayName: Build
     jobs:
       - job: BuildJob
-        displayName: Build 
-
+        displayName: Build
         steps:
-          - script: pnpm i 
-            displayName: 'Install dependencies'
+          - task: PowerShell@2
+            displayName: Build
+            inputs:
+              targetType: inline
+              script: |
+                pnpm i  
+                pnpm run lint 
+                pnpm run build
+      
+  - stage: TestStage 
+    displayName: Test 
+    dependsOn: BuildStage
+    jobs:
+      - job: UnitTestsJob
+        displayName: Run Unit Tests 
+        steps:
+          - task: PowerShell@2
+            displayName: Run Unit Tests
+            inputs:
+              targetType: inline
+              script: |
+                pnpm i
+                pnpm run test          
 
-          - script: pnpm run lint 
-            displayName: 'Lint'
-
-          - script: pnpm run build 
-            displayName: 'Build'
-
-          - script: pnpm run test 
-            displayName: 'Test'
-
+  - stage: PublishStage
+    displayName: Publish
+    dependsOn: TestStage
+    jobs:
       - job: PublishJob
-        displayName: PublishJob
-        dependsOn: BuildJob
-        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
-
+        displayName:  Publish Artifacts
         steps:
           - task: PowerShell@2
-            displayName: Generate build version
+            displayName: Generate Version
             inputs:
               targetType: inline
               script: |
-                Write-Host "Generating build version..."
+                $version = & $(Build.SourcesDirectory)/scripts/GenerateBuildVersion.ps1 -Revision $(Build.BuildId)
+                Write-Host "##vso[task.setvariable variable=BuildVersion]$version"
 
-                $buildVersion = (Get-Date).ToString("yy.MMdd") + ".$(Build.BuildId)"
-                Write-Host "##vso[task.setvariable variable=BuildVersion]$buildVersion"
-
-                Write-Host "Generated Build Version: $buildVersion"     
-          
           - task: PowerShell@2
-            displayName: Update package.json version 
+            displayName: Update Version
+            inputs:
+              targetType: filePath
+              filePath: $(Build.SourcesDirectory)/scripts/UpdateVersion.ps1
+              arguments: -PackageJsonPath $(packageJsonPath) -Version $(BuildVersion)    
+              
+          - task: PowerShell@2
+            displayName: Publish Artifacts
             inputs:
               targetType: inline
               script: |
-                Write-Host "Updating package.json version..."
-
-                $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
-                $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
-                $packageJson.version = "$(BuildVersion)"
-                $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
-
-                Write-Host "Updated package.json version to $(BuildVersion)"
-
-          - script: pnpm i
-            displayName: Install dependencies
-
-          - script: pnpm run build
-            displayName: 'Build'
+                pnpm i 
+                pnpm run build
 
           - task: PublishPipelineArtifact@1
-            displayName: Publish pipeline artifact
+            displayName: Publish RichillCapital.SharedKernel Artifacts
             inputs:
-              targetPath: $(Build.SourcesDirectory)/artifacts
-              artifact: 'RichillCapital.SharedKernel-$(BuildVersion)'
-              publishLocation: 'pipeline'
+              targetPath: $(artifactsPath)
+              artifact: RichillCapital.SharedKernel-$(buildConfiguration)-$(BuildVersion)
+              publishLocation: pipeline                
 
-  - stage: ReleaseStage
-    displayName: Build release artifacts 
-    dependsOn: BuildStage
-    condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')
 
-    jobs:
-      - job: ReleaseJob
-        displayName: Build release artifacts
-        steps:
-          - task: PowerShell@2
-            displayName: Generate release version
-            inputs:
-              targetType: inline
-              script: |
-                Write-Host "Generating release version from branch: $(Build.SourceBranch)"
+#   - stage: ReleaseStage
+#     displayName: Build release artifacts 
+#     dependsOn: BuildStage
+#     condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')
 
-                $branchName = "$(Build.SourceBranchName)"
-                Write-Host "##vso[task.setvariable variable=ReleaseVersion]$branchName"
+#     jobs:
+#       - job: ReleaseJob
+#         displayName: Build release artifacts
+#         steps:
+#           - task: PowerShell@2
+#             displayName: Generate release version
+#             inputs:
+#               targetType: inline
+#               script: |
+#                 Write-Host "Generating release version from branch: $(Build.SourceBranch)"
 
-                Write-Host "Generated Release Version: $branchName"
+#                 $branchName = "$(Build.SourceBranchName)"
+#                 Write-Host "##vso[task.setvariable variable=ReleaseVersion]$branchName"
 
-          - task: PowerShell@2
-            displayName: Update package.json version
-            inputs:
-              targetType: inline
-              script: |
-                Write-Host "Updating package.json version..."
+#                 Write-Host "Generated Release Version: $branchName"
 
-                $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
-                $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
-                $packageJson.version = "$(ReleaseVersion)"
-                $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
+#           - task: PowerShell@2
+#             displayName: Update package.json version
+#             inputs:
+#               targetType: inline
+#               script: |
+#                 Write-Host "Updating package.json version..."
 
-                Write-Host "Updated package.json version to $(ReleaseVersion)"
+#                 $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
+#                 $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+#                 $packageJson.version = "$(ReleaseVersion)"
+#                 $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
 
-          - script: pnpm i  
-            displayName: Install dependencies 
+#                 Write-Host "Updated package.json version to $(ReleaseVersion)"
 
-          - script: pnpm run build  
-            displayName: Generate release build 
+#           - script: pnpm i  
+#             displayName: Install dependencies 
 
-          - task: PublishPipelineArtifact@1
-            displayName: Publish pipeline artifact
-            inputs:
-              targetPath: $(Build.SourcesDirectory)/artifacts
-              artifact: 'RichillCapital.SharedKernel-$(ReleaseVersion)'
-              publishLocation: 'pipeline'             
+#           - script: pnpm run build  
+#             displayName: Generate release build 
 
-  - stage: ProductionStage
-    displayName: Production deployment
-    dependsOn: BuildStage
-    condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+#           - task: PublishPipelineArtifact@1
+#             displayName: Publish pipeline artifact
+#             inputs:
+#               targetPath: $(Build.SourcesDirectory)/artifacts
+#               artifact: 'RichillCapital.SharedKernel-$(ReleaseVersion)'
+#               publishLocation: 'pipeline'             
 
-    jobs:
-      - job: DeployProductionJob
-        displayName: Publish to NPM registry
-        steps:
-          - task: PowerShell@2
-            displayName: Generate release version from latest release branch
-            inputs:
-              targetType: inline
-              script: |
-                git fetch --all
+#   - stage: ProductionStage
+#     displayName: Production deployment
+#     dependsOn: BuildStage
+#     condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
 
-                $branches = git branch -r | Where-Object { $_ -match 'origin/release/\d+\.\d+\.\d+' }
+#     jobs:
+#       - job: DeployProductionJob
+#         displayName: Publish to NPM registry
+#         steps:
+#           - task: PowerShell@2
+#             displayName: Generate release version from latest release branch
+#             inputs:
+#               targetType: inline
+#               script: |
+#                 git fetch --all
 
-                if (-not $branches) {
-                    Write-Error "No matching branches found."
-                    exit 1
-                }
+#                 $branches = git branch -r | Where-Object { $_ -match 'origin/release/\d+\.\d+\.\d+' }
 
-                $versions = $branches |
-                ForEach-Object {
-                    if ($_ -match 'origin/release/(\d+\.\d+\.\d+)') {
-                        [PSCustomObject]@{
-                            BranchName = $_.Trim()
-                            Version = [System.Version]$matches[1]
-                        }
-                    }
-                }
+#                 if (-not $branches) {
+#                     Write-Error "No matching branches found."
+#                     exit 1
+#                 }
 
-                $latestBranch = $versions |
-                    Sort-Object -Property Version -Descending |
-                    Select-Object -First 1
+#                 $versions = $branches |
+#                 ForEach-Object {
+#                     if ($_ -match 'origin/release/(\d+\.\d+\.\d+)') {
+#                         [PSCustomObject]@{
+#                             BranchName = $_.Trim()
+#                             Version = [System.Version]$matches[1]
+#                         }
+#                     }
+#                 }
 
-                if ($latestBranch) {
-                    Write-Host "##vso[task.setvariable variable=ReleaseVersion]$($latestBranch.Version)"
-                    Write-Host "Generated release version: $($latestBranch.Version)"
-                } else {
-                    Write-Error "Failed to find the latest release branch."
-                    exit 1
-                }
+#                 $latestBranch = $versions |
+#                     Sort-Object -Property Version -Descending |
+#                     Select-Object -First 1
 
-          - task: PowerShell@2
-            displayName: Update package.json version
-            inputs:
-              targetType: inline
-              script: |
-                Write-Host "Updating package.json version..."
+#                 if ($latestBranch) {
+#                     Write-Host "##vso[task.setvariable variable=ReleaseVersion]$($latestBranch.Version)"
+#                     Write-Host "Generated release version: $($latestBranch.Version)"
+#                 } else {
+#                     Write-Error "Failed to find the latest release branch."
+#                     exit 1
+#                 }
 
-                $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
-                $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
-                $packageJson.version = "$(ReleaseVersion)"
-                $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
+#           - task: PowerShell@2
+#             displayName: Update package.json version
+#             inputs:
+#               targetType: inline
+#               script: |
+#                 Write-Host "Updating package.json version..."
 
-                Write-Host "Updated package.json version to $(ReleaseVersion)"
+#                 $packageJsonPath = "$(System.DefaultWorkingDirectory)/package.json"
+#                 $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+#                 $packageJson.version = "$(ReleaseVersion)"
+#                 $packageJson | ConvertTo-Json -Depth 32 | Set-Content $packageJsonPath
 
-          - script: pnpm i  
-            displayName: Install dependencies 
+#                 Write-Host "Updated package.json version to $(ReleaseVersion)"
 
-          - script: pnpm run build  
-            displayName: Generate release build 
+#           - script: pnpm i  
+#             displayName: Install dependencies 
+
+#           - script: pnpm run build  
+#             displayName: Generate release build 
             
-          - task: PowerShell@2
-            displayName: Create and push git tag
-            inputs:
-              targetType: inline
-              script: |
-                git config user.name "Mengsyue Amao Tsai"
-                git config user.email "mengsyue.tsai@outlook.com"
-                git fetch --tags
+#           - task: PowerShell@2
+#             displayName: Create and push git tag
+#             inputs:
+#               targetType: inline
+#               script: |
+#                 git config user.name "Mengsyue Amao Tsai"
+#                 git config user.email "mengsyue.tsai@outlook.com"
+#                 git fetch --tags
 
-                $tagName = "v$(ReleaseVersion)"
-                $existingTags = git tag --list
-                if ($existingTags -contains $tagName) {
-                  Write-Host "Tag $tagName already exists."
-                  exit 0
-                }                
+#                 $tagName = "v$(ReleaseVersion)"
+#                 $existingTags = git tag --list
+#                 if ($existingTags -contains $tagName) {
+#                   Write-Host "Tag $tagName already exists."
+#                   exit 0
+#                 }                
 
-                git tag -a "v$(ReleaseVersion)" -m "Release version $(ReleaseVersion)"
-                git push origin "v$(ReleaseVersion)"
+#                 git tag -a "v$(ReleaseVersion)" -m "Release version $(ReleaseVersion)"
+#                 git push origin "v$(ReleaseVersion)"
 
-          - task: PowerShell@2
-            displayName: Write authentication token to .npmrc
-            inputs:
-              targetType: inline
-              script: |
-                $token = "$(NPM_TOKEN)"
-                $auth = "//registry.npmjs.org/:_authToken=$($token)"
-                $npmrcPath = "$(System.DefaultWorkingDirectory)/.npmrc"
-                Set-Content -Path $npmrcPath -Value $auth
-                Write-Host "Authentication token written to .npmrc"
+#           - task: PowerShell@2
+#             displayName: Write authentication token to .npmrc
+#             inputs:
+#               targetType: inline
+#               script: |
+#                 $token = "$(NPM_TOKEN)"
+#                 $auth = "//registry.npmjs.org/:_authToken=$($token)"
+#                 $npmrcPath = "$(System.DefaultWorkingDirectory)/.npmrc"
+#                 Set-Content -Path $npmrcPath -Value $auth
+#                 Write-Host "Authentication token written to .npmrc"
                 
-          - script: pnpm publish --access public --no-git-checks || echo "Package already exists, skipping publish"
-            displayName: Publish package to npm registry
+#           - script: pnpm publish --access public --no-git-checks || echo "Package already exists, skipping publish"
+#             displayName: Publish package to npm registry
